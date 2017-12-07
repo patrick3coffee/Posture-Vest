@@ -9,19 +9,19 @@ SimpleTimer masterTimer;
 #define BLUE_PIN      14
 #define GREEN_PIN     13
 #define INDICATOR_LUX 40
+#define VIBE_OFFSET   10
 
 // Global variables
 bool vibeState, ledState, alertState;
 int currentReading,
     previousReading,
-    threshold,
     sensorTimerId,
     vibeTimerId,
     ledTimerId,
     whiteLeds[6];
 
 int sensors[BODY_SENSORS][4] = {      // { pin, deviation, threshold, reading }
-  {A5, -3, 0, 0}                     // belly sensor
+  {A5, -4, 0, 0}                     // belly sensor
 };
 
 void setup() {
@@ -59,7 +59,7 @@ void setup() {
   }
 
   sensorTimerId = masterTimer.setInterval(3000, beginAlert);
-  vibeTimerId = masterTimer.setInterval(300, toggleVibe);
+  vibeTimerId = masterTimer.setInterval(500, toggleVibe);
   ledTimerId = masterTimer.setInterval(100, toggleLed);
   masterTimer.enable(sensorTimerId);
   readSensors();
@@ -96,12 +96,11 @@ bool buttonPressed() {
   else {
     delay(10);      // debounce
     while (digitalRead(BUTTON_PIN) == LOW) {
+      analogWrite(BLUE_PIN, INDICATOR_LUX);
       // wait for button release
       delay(10);
     }
     //Serial.println("button pressed");
-    analogWrite(BLUE_PIN, INDICATOR_LUX);
-    delay(50);
     digitalWrite(BLUE_PIN, LOW);
     return true;
   }
@@ -132,8 +131,15 @@ void printSensors() {
 */
 
 bool sensorsAboveThreshold() {
+  int adjustedThreshold;
   for (int sensor = 0; sensor < BODY_SENSORS; sensor++) {
-    if (sensors[sensor][3] < sensors[sensor][2]) {
+  if (vibeState){
+    adjustedThreshold = VIBE_OFFSET + sensors[sensor][2];
+  }
+  else{
+    adjustedThreshold = sensors[sensor][2];
+  }
+    if (sensors[sensor][3] < adjustedThreshold) {
       return false;
     }
   }
@@ -185,6 +191,8 @@ void startVibeAlert() {
   //Serial.println("vibe on");
   toggleVibe();
   masterTimer.enable(vibeTimerId);
+  masterTimer.run();
+  delay(200);
 }
 
 void stopVibeAlert() {
