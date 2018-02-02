@@ -10,6 +10,15 @@
 #define INDICATOR_LUX 255
 #define VIBE_OFFSET   9
 
+/*
+   debug variable levels
+   10 - full sensor readings
+   20 - toggling events
+   30 - user and sensor events
+   40 - setup events
+*/
+#define DEBUG 40
+
 // Global variables
 SimpleTimer masterTimer;
 
@@ -32,27 +41,38 @@ void setup() {
   Serial.println("Posture Vest");
 #endif
 
-  // setup pins
-  pinMode(BUTTON_PIN, INPUT_PULLUP);  // set button
-  pinMode(VIBE_PIN, OUTPUT);    // vibrator
+#if DEBUG <= 40
+  Serial.println("Setup tasks");
+  Serial.println(" - button pin");
+#endif
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+#if DEBUG <= 40
+  Serial.println(" - vibrator pin");
+#endif
+  pinMode(VIBE_PIN, OUTPUT);
 
   for ( int sensor = 0; sensor < BODY_SENSORS; sensor++) {
+#if DEBUG <= 40
+    Serial.print(" - sensor pin ");
+    Serial.print(sensor);
+#endif
     pinMode(sensors[sensor][0], INPUT);
   }
 
-
-  /*pinMode(6, OUTPUT);         // charlieplex pins
-    pinMode(A7, OUTPUT);
-    pinMode(A8, OUTPUT);
-    pinMode(10, OUTPUT);*/
-
-  // RGB Pins
+#if DEBUG <= 40
+  Serial.println(" - RGB pins");
+#endif
   pinMode(RED_PIN, OUTPUT);
   pinMode(BLUE_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
 
   // white lights
   for (int led = 15; led <= 20; led++) {
+#if DEBUG <= 40
+    Serial.print(" - white LED pin ");
+    Serial.print(led - 15);
+#endif
     pinMode(led, OUTPUT);
     digitalWrite(led, HIGH);
     delay(50);
@@ -60,9 +80,21 @@ void setup() {
     whiteLeds[ led - 15 ] = led;
   }
 
+#if DEBUG <= 40
+  Serial.println(" - sensor timer");
+#endif
   sensorTimerId = masterTimer.setInterval(3000, beginAlert);
+#if DEBUG <= 40
+  Serial.println(" - vibrator timer");
+#endif
   vibeTimerId = masterTimer.setInterval(500, toggleVibe);
+#if DEBUG <= 40
+  Serial.println(" - LED timer");
+#endif
   ledTimerId = masterTimer.setInterval(100, toggleLed);
+#if DEBUG <= 40
+  Serial.println(" - enable sensor timer");
+#endif
   masterTimer.enable(sensorTimerId);
   readSensors();
   setThresholds();
@@ -239,7 +271,7 @@ void toggleVibe() {
    LED functions
 */
 
-int getBrightness(){
+int getBrightness() {
   int brightness, reading = analogRead(LIGHT_SENSOR);
   brightness = map(reading, 0, 1024, 0, INDICATOR_LUX);
   return brightness;
