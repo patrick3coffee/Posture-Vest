@@ -1,17 +1,18 @@
 #include <SimpleTimer.h>
 
-SimpleTimer masterTimer;
-
 #define BODY_SENSORS  1
 #define BUTTON_PIN    A4
-#define VIBE_PIN      11
+#define VIBE_PIN      A3
 #define RED_PIN       12
 #define BLUE_PIN      14
 #define GREEN_PIN     13
-#define INDICATOR_LUX 40
-#define VIBE_OFFSET   10
+#define LIGHT_SENSOR  A2
+#define INDICATOR_LUX 255
+#define VIBE_OFFSET   9
 
 // Global variables
+SimpleTimer masterTimer;
+
 bool vibeState, ledState, alertState;
 int currentReading,
     previousReading,
@@ -96,12 +97,12 @@ bool buttonPressed() {
   else {
     delay(10);      // debounce
     while (digitalRead(BUTTON_PIN) == LOW) {
-      analogWrite(BLUE_PIN, INDICATOR_LUX);
+      showColor(6);
       // wait for button release
       delay(10);
     }
     //Serial.println("button pressed");
-    digitalWrite(BLUE_PIN, LOW);
+    showColor(5);
     return true;
   }
 }
@@ -109,9 +110,12 @@ bool buttonPressed() {
 void readSensors() {
   for (int sensor = 0; sensor < BODY_SENSORS; sensor++) {
     int readingSum, i;
-    for (i = 0; i < 30; i++) {
+    for (i = 0; i < 100; i++) {
       readingSum += analogRead(sensors[sensor][0]);
       delay(1);
+      if (i % 50) {
+        masterTimer.run();
+      }
     }
     sensors[sensor][3] = readingSum / i;
   }
@@ -133,12 +137,12 @@ void printSensors() {
 bool sensorsAboveThreshold() {
   int adjustedThreshold;
   for (int sensor = 0; sensor < BODY_SENSORS; sensor++) {
-  if (vibeState){
-    adjustedThreshold = VIBE_OFFSET + sensors[sensor][2];
-  }
-  else{
-    adjustedThreshold = sensors[sensor][2];
-  }
+    if (vibeState) {
+      adjustedThreshold = VIBE_OFFSET + sensors[sensor][2];
+    }
+    else {
+      adjustedThreshold = sensors[sensor][2];
+    }
     if (sensors[sensor][3] < adjustedThreshold) {
       return false;
     }
@@ -192,7 +196,7 @@ void startVibeAlert() {
   toggleVibe();
   masterTimer.enable(vibeTimerId);
   masterTimer.run();
-  delay(200);
+  delay(300);
 }
 
 void stopVibeAlert() {
@@ -216,19 +220,23 @@ void toggleVibe() {
    LED functions
 */
 
+int getBrightness(){
+  int brightness, reading = analogRead(LIGHT_SENSOR);
+  brightness = map(reading, 0, 1024, 0, INDICATOR_LUX);
+  return brightness;
+}
 
 void startLedAlert() {
   toggleLed();
   masterTimer.enable(ledTimerId);
   //Serial.println("LED on");
-  digitalWrite(GREEN_PIN, LOW);
+  showColor(0);
 }
 
 void stopLedAlert() {
   masterTimer.disable(ledTimerId);
   //digitalWrite(whiteLeds[0], LOW);
-  digitalWrite(RED_PIN, LOW);
-  analogWrite(GREEN_PIN, INDICATOR_LUX);
+  showColor(4);
   ledState = false;
   //Serial.println("LED off");
 }
@@ -236,11 +244,52 @@ void stopLedAlert() {
 void toggleLed() {
   if (ledState) {
     //digitalWrite(whiteLeds[0], LOW);
-    digitalWrite(RED_PIN, LOW);
+    showColor(0);
   }
   else {
     //digitalWrite(whiteLeds[0], HIGH);
-    analogWrite(RED_PIN, INDICATOR_LUX);
+    showColor(5);
   }
   ledState = !ledState;
 }
+
+void showColor(int id) {
+  switch (id) {
+    case 0:     //black
+      applyColor(0, 0, 0);
+      break;
+    case 1:     //red
+      applyColor(255, 0, 0);
+      break;
+    case 2:     //green
+      applyColor(0, 255, 0);
+      break;
+    case 3:     //blue
+      applyColor(0, 0, 255);
+      break;
+    case 4:     //sea green
+      applyColor(150, 255, 50);
+      break;
+    case 5:     //amber
+      applyColor(255, 40, 10);
+      break;
+    case 6:     //violet
+      applyColor(255, 10, 150);
+      break;
+    default:
+      applyColor(0, 0, 0);
+      break;
+  }
+}
+
+void applyColor(int red, int green, int blue) {
+  int newRed, newGreen, newBlue, ambient;
+  ambient = getBrightness();
+  newRed = map(red, 0, 255, 0, ambient);
+  analogWrite(RED_PIN, newRed);
+  newGreen = map(green, 0, 255, 0, ambient);
+  analogWrite(GREEN_PIN, newGreen);
+  newBlue = map(blue, 0, 255, 0, ambient);
+  analogWrite(BLUE_PIN, newBlue);
+}
+
