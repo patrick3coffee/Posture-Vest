@@ -27,9 +27,10 @@ int sensors[BODY_SENSORS][4] = {      // { pin, deviation, threshold, reading }
 
 void setup() {
 
-  // setup serial communication for troubleshooting
+#ifdef DEBUG
   Serial.begin(9600);
   Serial.println("Posture Vest");
+#endif
 
   // setup pins
   pinMode(BUTTON_PIN, INPUT_PULLUP);  // set button
@@ -101,7 +102,9 @@ bool buttonPressed() {
       // wait for button release
       delay(10);
     }
-    //Serial.println("button pressed");
+#ifdef DEBUG
+    Serial.println("button pressed");
+#endif
     showColor(5);
     return true;
   }
@@ -122,12 +125,14 @@ void readSensors() {
 }
 
 void printSensors() {
+#ifdef DEBUG
   Serial.print("sensor readings: ");
   for (int sensor = 0; sensor < BODY_SENSORS; sensor++) {
     Serial.print( sensors[sensor][3] );
     Serial.print("  ");
   }
   Serial.println(' ');
+#endif
 }
 
 /*
@@ -151,14 +156,20 @@ bool sensorsAboveThreshold() {
 }
 
 void setThresholds() {
+#ifdef DEBUG
   printSensors();
   Serial.print("New Thresholds: ");
+#endif
   for (int sensor = 0; sensor < BODY_SENSORS; sensor++) {
     sensors[sensor][2] = sensors[sensor][3] - sensors[sensor][1];
+#ifdef DEBUG
     Serial.print(sensors[sensor][2]);
     Serial.print("  ");
+#endif
   }
+#ifdef DEBUG
   Serial.println(" ");
+#endif
   stopAlert();
 }
 
@@ -168,9 +179,11 @@ void setThresholds() {
 
 void beginAlert() {
   if (!alertState) {
+#ifdef DEBUG
     Serial.println("begin alert");
-    alertState = true;
     printSensors();
+#endif
+    alertState = true;
   }
   startVibeAlert();
   startLedAlert();
@@ -178,9 +191,11 @@ void beginAlert() {
 
 void stopAlert() {
   if (alertState) {
+#ifdef DEBUG
     Serial.println("stop alert");
-    alertState = false;
     printSensors();
+#endif
+    alertState = false;
   }
   stopVibeAlert();
   stopLedAlert();
@@ -192,7 +207,9 @@ void stopAlert() {
 */
 
 void startVibeAlert() {
-  //Serial.println("vibe on");
+#ifdef DEBUG
+  Serial.println("vibe on");
+#endif
   toggleVibe();
   masterTimer.enable(vibeTimerId);
   masterTimer.run();
@@ -200,7 +217,9 @@ void startVibeAlert() {
 }
 
 void stopVibeAlert() {
-  //Serial.println("vibe off");
+#ifdef DEBUG
+  Serial.println("vibe off");
+#endif
   masterTimer.disable(vibeTimerId);
   digitalWrite(VIBE_PIN, LOW);
   vibeState = false;
@@ -227,18 +246,22 @@ int getBrightness(){
 }
 
 void startLedAlert() {
+#ifdef DEBUG
+  Serial.println("LED on");
+#endif
   toggleLed();
   masterTimer.enable(ledTimerId);
-  //Serial.println("LED on");
   showColor(0);
 }
 
 void stopLedAlert() {
+#ifdef DEBUG
+  Serial.println("LED off");
+#endif
   masterTimer.disable(ledTimerId);
   //digitalWrite(whiteLeds[0], LOW);
   showColor(4);
   ledState = false;
-  //Serial.println("LED off");
 }
 
 void toggleLed() {
