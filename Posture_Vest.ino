@@ -11,7 +11,7 @@
 #define VIBE_OFFSET   9
 
 /*
-   debug variable levels
+   debug levels
    10 - full sensor readings
    20 - toggling events
    30 - user and sensor events
@@ -45,34 +45,41 @@ void setup() {
   Serial.println("Setup tasks");
   Serial.println(" - button pin");
 #endif
+
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
 #if DEBUG <= 40
   Serial.println(" - vibrator pin");
 #endif
+
   pinMode(VIBE_PIN, OUTPUT);
 
   for ( int sensor = 0; sensor < BODY_SENSORS; sensor++) {
+
 #if DEBUG <= 40
     Serial.print(" - sensor pin ");
     Serial.print(sensor);
 #endif
+
     pinMode(sensors[sensor][0], INPUT);
   }
 
 #if DEBUG <= 40
   Serial.println(" - RGB pins");
 #endif
+
   pinMode(RED_PIN, OUTPUT);
   pinMode(BLUE_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
 
   // white lights
   for (int led = 15; led <= 20; led++) {
+
 #if DEBUG <= 40
     Serial.print(" - white LED pin ");
     Serial.print(led - 15);
 #endif
+
     pinMode(led, OUTPUT);
     digitalWrite(led, HIGH);
     delay(50);
@@ -83,18 +90,25 @@ void setup() {
 #if DEBUG <= 40
   Serial.println(" - sensor timer");
 #endif
+
   sensorTimerId = masterTimer.setInterval(3000, beginAlert);
+
 #if DEBUG <= 40
   Serial.println(" - vibrator timer");
 #endif
+
   vibeTimerId = masterTimer.setInterval(500, toggleVibe);
+
 #if DEBUG <= 40
   Serial.println(" - LED timer");
 #endif
+
   ledTimerId = masterTimer.setInterval(100, toggleLed);
+
 #if DEBUG <= 40
   Serial.println(" - enable sensor timer");
 #endif
+
   masterTimer.enable(sensorTimerId);
   readSensors();
   setThresholds();
@@ -134,9 +148,11 @@ bool buttonPressed() {
       // wait for button release
       delay(10);
     }
+
 #ifdef DEBUG
     Serial.println("button pressed");
 #endif
+
     showColor(5);
     return true;
   }
@@ -157,6 +173,7 @@ void readSensors() {
 }
 
 void printSensors() {
+
 #ifdef DEBUG
   Serial.print("sensor readings: ");
   for (int sensor = 0; sensor < BODY_SENSORS; sensor++) {
@@ -165,6 +182,7 @@ void printSensors() {
   }
   Serial.println(' ');
 #endif
+
 }
 
 /*
@@ -188,20 +206,26 @@ bool sensorsAboveThreshold() {
 }
 
 void setThresholds() {
+
 #ifdef DEBUG
   printSensors();
   Serial.print("New Thresholds: ");
 #endif
+
   for (int sensor = 0; sensor < BODY_SENSORS; sensor++) {
     sensors[sensor][2] = sensors[sensor][3] - sensors[sensor][1];
+
 #ifdef DEBUG
     Serial.print(sensors[sensor][2]);
     Serial.print("  ");
 #endif
+
   }
+
 #ifdef DEBUG
   Serial.println(" ");
 #endif
+
   stopAlert();
 }
 
@@ -211,10 +235,12 @@ void setThresholds() {
 
 void beginAlert() {
   if (!alertState) {
+
 #ifdef DEBUG
     Serial.println("begin alert");
     printSensors();
 #endif
+
     alertState = true;
   }
   startVibeAlert();
@@ -223,10 +249,12 @@ void beginAlert() {
 
 void stopAlert() {
   if (alertState) {
+
 #ifdef DEBUG
     Serial.println("stop alert");
     printSensors();
 #endif
+
     alertState = false;
   }
   stopVibeAlert();
@@ -239,9 +267,11 @@ void stopAlert() {
 */
 
 void startVibeAlert() {
+
 #ifdef DEBUG
   Serial.println("vibe on");
 #endif
+
   toggleVibe();
   masterTimer.enable(vibeTimerId);
   masterTimer.run();
@@ -249,9 +279,11 @@ void startVibeAlert() {
 }
 
 void stopVibeAlert() {
+
 #ifdef DEBUG
   Serial.println("vibe off");
 #endif
+
   masterTimer.disable(vibeTimerId);
   digitalWrite(VIBE_PIN, LOW);
   vibeState = false;
@@ -273,23 +305,27 @@ void toggleVibe() {
 
 int getBrightness() {
   int brightness, reading = analogRead(LIGHT_SENSOR);
-  brightness = map(reading, 0, 1024, 0, INDICATOR_LUX);
+  brightness = map(reading, 0, 1024, 5, INDICATOR_LUX);
   return brightness;
 }
 
 void startLedAlert() {
+
 #ifdef DEBUG
   Serial.println("LED on");
 #endif
+
   toggleLed();
   masterTimer.enable(ledTimerId);
   showColor(0);
 }
 
 void stopLedAlert() {
+
 #ifdef DEBUG
   Serial.println("LED off");
 #endif
+
   masterTimer.disable(ledTimerId);
   //digitalWrite(whiteLeds[0], LOW);
   showColor(4);
@@ -306,6 +342,22 @@ void toggleLed() {
     showColor(5);
   }
   ledState = !ledState;
+}
+
+void applyColor(int red, int green, int blue, bool adjust = true) {
+  int newRed, newGreen, newBlue, adjustment;
+  if (adjust) {
+    adjustment = getBrightness();
+  }
+  else {
+    adjustment = 255;
+  }
+  newRed = map(red, 0, 255, 0, adjustment);
+  analogWrite(RED_PIN, newRed);
+  newGreen = map(green, 0, 255, 0, adjustment);
+  analogWrite(GREEN_PIN, newGreen);
+  newBlue = map(blue, 0, 255, 0, adjustment);
+  analogWrite(BLUE_PIN, newBlue);
 }
 
 void showColor(int id) {
@@ -337,14 +389,5 @@ void showColor(int id) {
   }
 }
 
-void applyColor(int red, int green, int blue) {
-  int newRed, newGreen, newBlue, ambient;
-  ambient = getBrightness();
-  newRed = map(red, 0, 255, 0, ambient);
-  analogWrite(RED_PIN, newRed);
-  newGreen = map(green, 0, 255, 0, ambient);
-  analogWrite(GREEN_PIN, newGreen);
-  newBlue = map(blue, 0, 255, 0, ambient);
-  analogWrite(BLUE_PIN, newBlue);
-}
+
 
